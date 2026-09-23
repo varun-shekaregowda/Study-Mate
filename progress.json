@@ -3,14 +3,24 @@
         "CS101": "Completed",
         "CS102": "Completed",
         "CS103": "Missed",
-        "CS201": "Completed",
+        "CS201": "Missed",
         "CS202": "Pending",
         "CS301": "Completed",
-        "CS302": "Pending",
+        "CS302": "Missed",
         "CS401": "Pending",
         "streak": 1,
         "last_active_date": "2026-09-25",
-        "start_date": "2026-09-25"
+        "start_date": "2026-09-25",
+        "self_assessment": {
+            "CS101": "Strong",
+            "CS102": "Average",
+            "CS103": "Weak",
+            "CS201": "Average",
+            "CS202": "Weak",
+            "CS301": "Strong",
+            "CS302": "Average",
+            "CS401": "Average"
+        }
     },
     "profile_3": {
         "CS101": "Completed",

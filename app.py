@@ -11,31 +11,118 @@ st.set_page_config(page_title="StudyMate - Adaptive Study Plan Generator", layou
 
 st.markdown("""
 <style>
+/* Hide Streamlit Default Elements */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header[data-testid="stHeader"] {background: transparent;}
+
+/* Global Container Tweaks */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 1200px;
+}
+
+/* Premium Typography & Hero Section */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+html, body, [class*="css"]  {
+    font-family: 'Inter', sans-serif;
+}
+.hero-title {
+    font-weight: 800;
+    font-size: 3.5rem;
+    background: -webkit-linear-gradient(45deg, #ff4b4b, #ff8f00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.2rem;
+}
+.hero-subtitle {
+    font-weight: 400;
+    font-size: 1.2rem;
+    color: #a0aab5;
+    margin-top: 0;
+}
+
+/* Glassmorphism 2.0 Panels */
 .glass-panel {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    padding: 20px;
-    margin-bottom: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    padding: 25px;
+    margin-bottom: 25px;
     color: inherit;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.glass-panel:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
 }
 .quote-text {
     font-style: italic;
-    font-size: 1.2em;
-    margin-bottom: 10px;
+    font-size: 1.25em;
+    margin-bottom: 15px;
+    color: #e0e6ed;
+    border-left: 4px solid #ff4b4b;
+    padding-left: 15px;
 }
 .streak-text {
-    font-size: 1.8em;
-    font-weight: bold;
+    font-size: 2.2em;
+    font-weight: 800;
     color: #ff4b4b;
+    text-shadow: 0 2px 10px rgba(255, 75, 75, 0.3);
 }
 .day-badge {
-    font-size: 0.9em;
-    opacity: 0.7;
-    margin-top: 10px;
+    font-size: 0.95em;
+    color: #8b9bb4;
+    margin-top: 15px;
+    display: inline-block;
+    background: rgba(0,0,0,0.2);
+    padding: 5px 12px;
+    border-radius: 20px;
+}
+
+/* Custom Metric Cards */
+.premium-card {
+    background: linear-gradient(135deg, rgba(30, 34, 45, 0.8) 0%, rgba(20, 24, 32, 0.9) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    margin-bottom: 20px;
+}
+.card-label {
+    font-size: 0.9rem;
+    color: #8b9bb4;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+.card-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+/* Primary Button Styling */
+button[kind="primary"] {
+    background: linear-gradient(90deg, #ff4b4b 0%, #ff8f00 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 2rem !important;
+    border-radius: 10px !important;
+    transition: all 0.3s ease !important;
+}
+button[kind="primary"]:hover {
+    transform: scale(1.02);
+    box-shadow: 0 5px 15px rgba(255, 75, 75, 0.4) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -61,12 +148,12 @@ curriculum, profiles, global_progress = load_data()
 # ─────────────────────────────────────────────
 # SIDEBAR CONFIGURATION
 # ─────────────────────────────────────────────
-st.sidebar.title("Configuration")
+st.sidebar.title("⚙️ Configuration")
 profile_names = [p["name"] for p in profiles]
 selected_profile_name = st.sidebar.selectbox("Select Student Profile", profile_names)
 selected_profile = next(p for p in profiles if p["name"] == selected_profile_name)
 
-st.sidebar.markdown("### Settings")
+st.sidebar.markdown("### 🔧 Settings")
 simulate_days = st.sidebar.slider(
     "Simulate Days Passed (Time Travel ⏩)",
     min_value=0, max_value=30, value=0,
@@ -80,7 +167,7 @@ ollama_model = st.sidebar.text_input("Ollama Model Name", value="qwen3:8b")
 # ─────────────────────────────────────────────
 # METADATA KEYS — never confused with topic IDs
 # ─────────────────────────────────────────────
-META_KEYS = {"streak", "last_active_date", "start_date"}
+META_KEYS = {"streak", "last_active_date", "start_date", "self_assessment"}
 
 # ─────────────────────────────────────────────
 # LOAD & INITIALIZE USER PROGRESS
@@ -133,6 +220,9 @@ if last_active:
 # ─────────────────────────────────────────────
 topic_only_progress = {k: v for k, v in user_progress.items() if k not in META_KEYS}
 
+# Load persisted self-assessment (if any)
+self_assessment = user_progress.get("self_assessment", {})
+
 student_inputs = {
     "name": selected_profile["name"],
     "profile_id": selected_profile["profile_id"],
@@ -140,18 +230,19 @@ student_inputs = {
     "target_days": int(target_days),
     "baseline_confidence": selected_profile["baseline_confidence"],
     "progress": topic_only_progress,  # ← only real topic statuses
+    "self_assessment": self_assessment,  # ← student's own weakness/strength ratings
 }
 
 # ─────────────────────────────────────────────
 # SIDEBAR ADVANCED MANAGEMENT
 # ─────────────────────────────────────────────
-st.sidebar.markdown("### Advanced Management")
+st.sidebar.markdown("### 🛠️ Advanced Management")
 
 # BUG FIX: Initialize edited_curriculum from the canonical curriculum by default
 # so it's ALWAYS defined even if the popover is never opened.
 edited_curriculum = curriculum
 
-with st.sidebar.popover("Customize Curriculum", use_container_width=True):
+with st.sidebar.popover("📚 Customize Curriculum", use_container_width=True):
     st.markdown("Edit the topics, complexity, or prerequisites directly below:")
     df_curriculum = pd.DataFrame(curriculum)
     edited_df = st.data_editor(df_curriculum, num_rows="dynamic", use_container_width=True)
@@ -167,7 +258,7 @@ with st.sidebar.popover("Customize Curriculum", use_container_width=True):
         st.success("Curriculum saved!")
         st.rerun()
 
-with st.sidebar.popover("Manage User Profiles", use_container_width=True):
+with st.sidebar.popover("👤 Manage User Profiles", use_container_width=True):
     st.markdown("Edit existing profiles or add new ones below:")
     df_profiles = pd.DataFrame([{
         "profile_id": p.get("profile_id", ""),
@@ -204,8 +295,12 @@ with st.sidebar.popover("Manage User Profiles", use_container_width=True):
 tabs = st.tabs(["Dashboard", "Project Documentation & Report"])
 
 with tabs[0]:
-    st.title("StudyMate 🚀")
-    st.markdown("Your adaptive, dynamic study plan generator and mentor.")
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0 3rem 0;">
+        <h1 class="hero-title">StudyMate <span style="text-shadow: 0 0 20px rgba(255, 75, 75, 0.5);">🚀</span></h1>
+        <p class="hero-subtitle">Your personalized, adaptive learning engine.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     quotes = [
         "The beautiful thing about learning is nobody can take it away from you.",
@@ -232,6 +327,51 @@ with tabs[0]:
     """, unsafe_allow_html=True)
 
     total_count = len(edited_curriculum)
+
+    # ── Self-Assessment Survey ───────────────────────
+    with st.expander("📋 Self-Assessment Survey (What are you weak/strong in?)", expanded=False):
+        st.markdown("Rate your **confidence level** for each topic. This directly influences how the AI allocates your study time and gives advice.")
+        
+        survey_data = []
+        for topic in edited_curriculum:
+            current_rating = self_assessment.get(topic["id"], "Average")
+            survey_data.append({
+                "Topic ID": topic["id"],
+                "Topic Name": topic["name"],
+                "Confidence": current_rating
+            })
+        
+        df_survey = pd.DataFrame(survey_data)
+        edited_survey_df = st.data_editor(
+            df_survey,
+            column_config={
+                "Confidence": st.column_config.SelectboxColumn(
+                    "Your Confidence",
+                    help="How confident are you in this topic?",
+                    width="medium",
+                    options=["Weak", "Average", "Strong"],
+                    required=True,
+                )
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+        
+        if st.button("💾 Save Self-Assessment"):
+            new_assessment = {row["Topic ID"]: row["Confidence"] for _, row in edited_survey_df.iterrows()}
+            
+            # Persist into progress.json
+            user_progress["self_assessment"] = new_assessment
+            global_progress[selected_profile["profile_id"]] = user_progress
+            with open("progress.json", "w") as f:
+                json.dump(global_progress, f, indent=4)
+            
+            # Update student_inputs live so the next plan generation uses it
+            student_inputs["self_assessment"] = new_assessment
+            self_assessment = new_assessment
+            
+            st.success("Self-assessment saved! The AI will now prioritize your weak areas.")
+            st.rerun()
 
     # ── Progress Tracker ────────────────────────────
     with st.expander("Track Daily Progress (Update Status Here)", expanded=True):
@@ -300,6 +440,7 @@ with tabs[0]:
             merged_progress["streak"] = current_streak
             merged_progress["last_active_date"] = new_last_active
             merged_progress["start_date"] = user_progress.get("start_date", VIRTUAL_TODAY.isoformat())
+            merged_progress["self_assessment"] = self_assessment  # preserve survey data
 
             global_progress[selected_profile["profile_id"]] = merged_progress
             with open("progress.json", "w") as f:
@@ -310,7 +451,31 @@ with tabs[0]:
     # ── Metrics Row ─────────────────────────────────
     col1, col2, col3 = st.columns(3)
     total_hours = daily_hours * target_days
-    col1.metric("Total Available Hours", f"{total_hours:.1f} hrs")
+    
+    # Calculate metrics based on edited_curriculum
+    avg_complexity = sum(t["complexity"] for t in edited_curriculum) / len(edited_curriculum) if edited_curriculum else 0
+    pace = (total_hours / len(edited_curriculum) if edited_curriculum else 0)
+
+    col1.markdown(f"""
+        <div class="premium-card">
+            <div class="card-label">⏱️ Total Available Hours</div>
+            <div class="card-value">{total_hours:.1f}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col2.markdown(f"""
+        <div class="premium-card">
+            <div class="card-label">🧠 Average Complexity</div>
+            <div class="card-value">{avg_complexity:.2f} <span style="font-size: 0.5em; color: #8b9bb4;">/ 5.0</span></div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col3.markdown(f"""
+        <div class="premium-card">
+            <div class="card-label">⚡ Expected Pace</div>
+            <div class="card-value">{pace:.1f} <span style="font-size: 0.5em; color: #8b9bb4;">hrs/topic</span></div>
+        </div>
+    """, unsafe_allow_html=True)
 
     # ── Generate Plan Button ─────────────────────────
     if st.button("Generate Adaptive Study Plan", type="primary"):
@@ -330,9 +495,7 @@ with tabs[0]:
             df = pd.DataFrame(df_data)
             st.dataframe(df, use_container_width=True)
 
-            avg_complexity = sum(t["complexity"] for t in weighted_plan) / len(weighted_plan) if weighted_plan else 0
-            col2.metric("Average Complexity", f"{avg_complexity:.2f} / 5.0")
-            col3.metric("Pace", f"{(total_hours / len(weighted_plan) if weighted_plan else 0):.1f} hrs/topic")
+            st.markdown("<br>", unsafe_allow_html=True)
 
             st.subheader("AI Synthesized Day-by-Day Plan")
             ai_plan = generate_ai_study_plan(weighted_plan, student_inputs, model_name=ollama_model)

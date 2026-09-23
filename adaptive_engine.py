@@ -57,6 +57,16 @@ def calculate_adaptive_schedule(curriculum, student_inputs):
             deficiency_multiplier = 1.0 + 0.5 * (1.0 - conf_level)
             if status == "Missed":
                 deficiency_multiplier *= 1.2  # prioritize missed topics
+            
+            # Self-Assessment Boost: student's own perception of weakness/strength
+            self_assessment = student_inputs.get("self_assessment", {})
+            sa_rating = self_assessment.get(topic["id"], "Average")
+            if sa_rating == "Weak":
+                deficiency_multiplier *= 1.5  # significantly more time for weak areas
+            elif sa_rating == "Strong":
+                deficiency_multiplier *= 0.7  # less time for areas they're confident in
+            # "Average" = no change (1.0x)
+            
             weight = topic["complexity"] * deficiency_multiplier
             
         topic_copy = dict(topic)
@@ -74,12 +84,29 @@ def generate_ai_study_plan(sequenced_weighted_plan, student_meta, model_name="qw
     # Extract topics that actually need studying
     remaining_topics = [t for t in sequenced_weighted_plan if t["allocated_hours"] > 0]
     
+    # Build a human-readable summary of self-assessment for the LLM
+    self_assessment = student_meta.get("self_assessment", {})
+    weak_topics = [t["name"] for t in remaining_topics if self_assessment.get(t["id"]) == "Weak"]
+    strong_topics = [t["name"] for t in remaining_topics if self_assessment.get(t["id"]) == "Strong"]
+    
+    sa_summary = ""
+    if weak_topics:
+        sa_summary += f"\nThe student self-identified as WEAK in: {', '.join(weak_topics)}."
+    if strong_topics:
+        sa_summary += f"\nThe student self-identified as STRONG in: {', '.join(strong_topics)}."
+    if not weak_topics and not strong_topics:
+        sa_summary = "\nThe student has not yet completed a self-assessment."
+    
     prompt = f"""
 Act as an expert academic mentor. A student ({student_meta.get('name', 'Student')}) is preparing to study the following topics: {', '.join([t['name'] for t in remaining_topics])}.
-Student Profile: {json.dumps(student_meta, indent=2)}
+Student Profile: {json.dumps({k: v for k, v in student_meta.items() if k != 'self_assessment'}, indent=2)}
 
-Please provide a highly motivational, encouraging 2-3 sentence introduction to their study plan. 
-Acknowledge their progress (if they missed topics, encourage them; if they completed some, congratulate them) and give them a quick tip on how to tackle these topics.
+Self-Assessment Summary:{sa_summary}
+
+Based on this, provide a highly motivational, encouraging 2-3 sentence introduction to their study plan.
+- If they have WEAK areas, acknowledge them specifically and give a concrete tip on how to improve.
+- If they have STRONG areas, congratulate them and suggest how to leverage those strengths.
+- If they missed or completed topics, factor that into your encouragement.
 Do NOT generate the timetable itself, only the short introduction.
 Respond in clear Markdown format without code blocks.
 """
