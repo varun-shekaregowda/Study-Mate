@@ -1,0 +1,50 @@
+[
+    {
+        "profile_id": "profile_1",
+        "name": "Weekend Warrior",
+        "daily_available_hours": 2.0,
+        "target_days": 14,
+        "baseline_confidence": {
+            "CS101": 0.9,
+            "CS102": 0.5,
+            "CS103": 0.2,
+            "CS201": 0.1,
+            "CS202": 0.4,
+            "CS301": 0.3,
+            "CS302": 0.1,
+            "CS401": 0.0
+        }
+    },
+    {
+        "profile_id": "profile_2",
+        "name": "Full-Time Bootcamper",
+        "daily_available_hours": 8.0,
+        "target_days": 7,
+        "baseline_confidence": {
+            "CS101": 0.8,
+            "CS102": 0.8,
+            "CS103": 0.6,
+            "CS201": 0.5,
+            "CS202": 0.5,
+            "CS301": 0.6,
+            "CS302": 0.2,
+            "CS401": 0.1
+        }
+    },
+    {
+        "profile_id": "profile_3",
+        "name": "Casual Learner",
+        "daily_available_hours": 1.5,
+        "target_days": 30,
+        "baseline_confidence": {
+            "CS101": 1.0,
+            "CS102": 0.7,
+            "CS103": 0.4,
+            "CS201": 0.2,
+            "CS202": 0.2,
+            "CS301": 0.2,
+            "CS302": 0.0,
+            "CS401": 0.0
+        }
+    }
+]

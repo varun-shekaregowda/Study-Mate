@@ -1,0 +1,107 @@
+[
+    {
+        "id": "CS101",
+        "name": "Introduction to Programming",
+        "complexity": 1,
+        "prerequisites": [],
+        "estimated_base_hours": 10,
+        "recommended_activities": [
+            "theory",
+            "coding",
+            "quizzes"
+        ]
+    },
+    {
+        "id": "CS102",
+        "name": "Data Structures",
+        "complexity": 3,
+        "prerequisites": [
+            "CS101"
+        ],
+        "estimated_base_hours": 15,
+        "recommended_activities": [
+            "coding",
+            "quizzes"
+        ]
+    },
+    {
+        "id": "CS103",
+        "name": "Algorithms",
+        "complexity": 4,
+        "prerequisites": [
+            "CS102"
+        ],
+        "estimated_base_hours": 20,
+        "recommended_activities": [
+            "theory",
+            "coding"
+        ]
+    },
+    {
+        "id": "CS201",
+        "name": "Operating Systems",
+        "complexity": 4,
+        "prerequisites": [
+            "CS102"
+        ],
+        "estimated_base_hours": 25,
+        "recommended_activities": [
+            "theory",
+            "coding"
+        ]
+    },
+    {
+        "id": "CS202",
+        "name": "Computer Networks",
+        "complexity": 3,
+        "prerequisites": [
+            "CS101"
+        ],
+        "estimated_base_hours": 15,
+        "recommended_activities": [
+            "theory",
+            "quizzes"
+        ]
+    },
+    {
+        "id": "CS301",
+        "name": "Databases",
+        "complexity": 3,
+        "prerequisites": [
+            "CS102"
+        ],
+        "estimated_base_hours": 20,
+        "recommended_activities": [
+            "theory",
+            "coding"
+        ]
+    },
+    {
+        "id": "CS302",
+        "name": "Machine Learning",
+        "complexity": 5,
+        "prerequisites": [
+            "CS103"
+        ],
+        "estimated_base_hours": 30,
+        "recommended_activities": [
+            "theory",
+            "coding",
+            "projects"
+        ]
+    },
+    {
+        "id": "CS401",
+        "name": "Deep Learning",
+        "complexity": 5,
+        "prerequisites": [
+            "CS302"
+        ],
+        "estimated_base_hours": 30,
+        "recommended_activities": [
+            "theory",
+            "coding",
+            "projects"
+        ]
+    }
+]
