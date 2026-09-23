@@ -1,7 +1,8 @@
 import json
 import math
+import requests
 from collections import defaultdict, deque
-import google.generativeai as genai
+from rag_engine import retrieve_context, retrieve_context_for_topic
 
 def topological_sort(curriculum):
     adj = defaultdict(list)
@@ -69,35 +70,45 @@ def calculate_adaptive_schedule(curriculum, student_inputs):
         
     return weighted_topics
 
-def generate_ai_study_plan(sequenced_weighted_plan, student_meta, api_key=None):
-    if not api_key:
-        return _offline_fallback_generator(sequenced_weighted_plan, student_meta)
-        
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-pro-latest")
-        
-        prompt = f"""
-Act as an expert academic scheduler and mentor. I am providing a sequenced and mathematically weighted list of topics.
+def generate_ai_study_plan(sequenced_weighted_plan, student_meta, model_name="qwen3:8b"):
+    # Extract topics that actually need studying
+    remaining_topics = [t for t in sequenced_weighted_plan if t["allocated_hours"] > 0]
+    
+    prompt = f"""
+Act as an expert academic mentor. A student ({student_meta.get('name', 'Student')}) is preparing to study the following topics: {', '.join([t['name'] for t in remaining_topics])}.
 Student Profile: {json.dumps(student_meta, indent=2)}
-Sequenced Plan (Completed topics have 0 allocated_hours): {json.dumps(sequenced_weighted_plan, indent=2)}
 
-First, evaluate the student's progress. If they have completed topics, congratulate them. If they have missed topics, provide highly motivational encouragement to get them back on track. 
-Next, provide advice on the order they should study the *remaining* topics (allocated_hours > 0) based on complexity and prerequisites.
-Then, generate a refined, detailed day-by-day study timetable ONLY for the remaining topics. Allocate the total hours intelligently.
-For each day, include a clear description of what exactly should be studied, along with active recall tasks, hands-on activities, and evaluation checkpoints.
-Respond in clear, structured Markdown format without any markdown code block enclosures like ```markdown. 
-Just return the markdown text directly.
+Please provide a highly motivational, encouraging 2-3 sentence introduction to their study plan. 
+Acknowledge their progress (if they missed topics, encourage them; if they completed some, congratulate them) and give them a quick tip on how to tackle these topics.
+Do NOT generate the timetable itself, only the short introduction.
+Respond in clear Markdown format without code blocks.
 """
-        response = model.generate_content(prompt)
-        return response.text
+
+    intro = ""
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": model_name,
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=15 # Fast timeout since we only ask for 3 sentences
+        )
+        response.raise_for_status()
+        data = response.json()
+        intro = data.get("response", "Welcome to your study plan!")
     except Exception as e:
-        return f"### AI Generation Failed\nAn error occurred: {str(e)}\n\n" + _offline_fallback_generator(sequenced_weighted_plan, student_meta)
+        intro = f"### Mentor Intro\nWelcome {student_meta.get('name', 'Student')}! Let's get to work on your personalized schedule. (Offline mode active)"
         
-def _offline_fallback_generator(sequenced_weighted_plan, student_meta):
+    schedule_md = _deterministic_schedule_generator(sequenced_weighted_plan, student_meta)
+    
+    return f"{intro}\n\n---\n\n{schedule_md}"
+        
+def _deterministic_schedule_generator(sequenced_weighted_plan, student_meta):
     output = []
-    output.append(f"## Offline Mock Schedule for {student_meta.get('name', 'Student')}")
-    output.append(f"Total Target Days: {student_meta.get('target_days', 7)} | Daily Hours: {student_meta.get('daily_available_hours', 2)}")
+    output.append(f"## Your Adaptive Day-by-Day Schedule")
+    output.append(f"*Total Target Days: {student_meta.get('target_days', 7)} | Daily Hours: {student_meta.get('daily_available_hours', 2)}*")
     
     day = 1
     current_day_hours = 0
@@ -106,25 +117,51 @@ def _offline_fallback_generator(sequenced_weighted_plan, student_meta):
     if max_daily <= 0:
         return "Error: Daily available hours must be greater than 0."
 
-    output.append(f"### Day {day}")
+    output.append(f"\n### 📅 Day {day}")
     
     for topic in sequenced_weighted_plan:
         topic_hours = topic["allocated_hours"]
+        is_new_topic = True
+        
         while topic_hours > 0.01:
             if current_day_hours >= max_daily:
                 day += 1
                 current_day_hours = 0
+                if day > student_meta.get('target_days', 7) * 2: # Failsafe
+                    break
+                output.append(f"\n### 📅 Day {day}")
+                
+            remaining_in_day = max_daily - current_day_hours
+            
+            # Smart Anti-Fragmentation Logic:
+            # If we are starting a NEW topic, and there is very little time left today (< 0.6 hrs or < 25% of daily max)
+            # and the topic is heavier than the time remaining, push it to the next day to prevent meaningless cognitive splitting.
+            if current_day_hours > 0 and is_new_topic and remaining_in_day < max(0.6, max_daily * 0.25) and topic_hours > remaining_in_day:
+                day += 1
+                current_day_hours = 0
                 if day > student_meta.get('target_days', 7) * 2:
                     break
-                output.append(f"\n### Day {day}")
+                output.append(f"\n### 📅 Day {day} *(Focus Shift)*")
+                remaining_in_day = max_daily
                 
-            chunk = min(topic_hours, max_daily - current_day_hours)
-            output.append(f"- **{topic['name']}**: {chunk:.1f} hours ({', '.join(topic['recommended_activities'])})")
+            chunk = min(topic_hours, remaining_in_day)
+            output.append(f"- **{topic['name']}**: {chunk:.1f} hours")
+            
+            # Fetch specific topic details from RAG Knowledge Base
+            topic_details = retrieve_context_for_topic(topic['name'])
+            output.append(f"  - 📝 **Focus:** {topic_details}")
+            
+            # Add recommended activities as sub-bullets
+            if topic.get('recommended_activities'):
+                acts = ", ".join(topic['recommended_activities'])
+                output.append(f"  - 🔹 **Activities:** {acts}")
+                    
             topic_hours -= chunk
             current_day_hours += chunk
+            is_new_topic = False
 
-    output.append("\n#### Checkpoints")
-    output.append("- Daily: Active recall quiz.")
-    output.append("- End of Plan: Comprehensive evaluation.")
+    output.append("\n#### 🎯 Daily Checkpoints")
+    output.append("- Test yourself using active recall quizzes at the end of each day.")
+    output.append("- If you miss a topic, don't panic—update your progress on the dashboard and regenerate the plan tomorrow!")
             
     return "\n".join(output)
